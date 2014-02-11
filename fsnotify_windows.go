@@ -127,10 +127,11 @@ type Watcher struct {
 	isClosed      bool              // Set to true when Close() is first called
 	quit          chan chan<- error
 	cookie        uint32
+	recursive     bool
 }
 
 // NewWatcher creates and returns a Watcher.
-func NewWatcher() (*Watcher, error) {
+func NewWatcher(recursive bool) (*Watcher, error) {
 	port, e := syscall.CreateIoCompletionPort(syscall.InvalidHandle, 0, 0, 0)
 	if e != nil {
 		return nil, os.NewSyscallError("CreateIoCompletionPort", e)
@@ -144,6 +145,7 @@ func NewWatcher() (*Watcher, error) {
 		internalEvent: make(chan *FileEvent),
 		Error:         make(chan error),
 		quit:          make(chan chan<- error, 1),
+		recursive:     recursive,
 	}
 	go w.readEvents()
 	go w.purgeEvents()
@@ -379,7 +381,7 @@ func (w *Watcher) startRead(watch *watch) error {
 		return nil
 	}
 	e := syscall.ReadDirectoryChanges(watch.ino.handle, &watch.buf[0],
-		uint32(unsafe.Sizeof(watch.buf)), false, mask, nil, &watch.ov, 0)
+		uint32(unsafe.Sizeof(watch.buf)), w.recursive, mask, nil, &watch.ov, 0)
 	if e != nil {
 		err := os.NewSyscallError("ReadDirectoryChanges", e)
 		if e == syscall.ERROR_ACCESS_DENIED && watch.mask&provisional == 0 {
