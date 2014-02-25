@@ -484,7 +484,9 @@ func (w *Watcher) readEvents() {
 
 			// Point "raw" to the event in the buffer
 			raw := (*syscall.FileNotifyInformation)(unsafe.Pointer(&watch.buf[offset]))
-			buf := (*[syscall.MAX_PATH]uint16)(unsafe.Pointer(&raw.FileName))
+			//buf := (*[syscall.MAX_PATH]uint16)(unsafe.Pointer(&raw.FileName))
+			// http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx
+			buf := (*[32767]uint16)(unsafe.Pointer(&raw.FileName))
 			name := syscall.UTF16ToString(buf[:raw.FileNameLength/2])
 			fullname := watch.path + "\\" + name
 
